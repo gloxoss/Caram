@@ -1,0 +1,863 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider         = "zod-prisma-types"
+  output           = "../src/zod"
+  createInputTypes = false
+  addIncludeType   = false
+  addSelectType    = false
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+// User model for authentication and user management
+model User {
+  id                 String       @id
+  name               String
+  email              String       @unique
+  emailVerified      Boolean
+  image              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  username           String?      @unique
+  role               String?
+  banned             Boolean?     @default(false)
+  banReason          String?
+  banExpires         DateTime?
+  onboardingComplete Boolean      @default(false)
+  paymentsCustomerId String?
+  locale             String?
+  sessions           Session[]
+  accounts           Account[]
+  passkeys           Passkey[]
+  invitations        Invitation[]
+  purchases          Purchase[]
+  memberships        Member[]
+  aiChats            AiChat[]
+  employees          Employee[]
+  sales              Sale[]
+
+  @@map("user")
+}
+
+// Session model for user sessions
+model Session {
+  id                   String    @id
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy       String?
+  activeOrganizationId String?
+  token                String    @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("session")
+}
+
+// Account model for external authentication providers
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  expiresAt             DateTime?
+  password              String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+// Verification model for email/password resets
+model Verification {
+  id         String    @id
+  identifier String
+  value      String    @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// Passkey model for WebAuthn authentication
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+
+  @@map("passkey")
+}
+
+// Organization model as the central entity for multi-tenancy
+model Organization {
+  id                 String             @id
+  name               String
+  slug               String?            @unique
+  logo               String?
+  createdAt          DateTime           @default(now())
+  metadata           String?
+  paymentsCustomerId String?
+  members            Member[]
+  invitations        Invitation[]
+  purchases          Purchase[]
+  aiChats            AiChat[]
+  outlets            Outlet[]
+  sales              Sale[]
+  products           Product[]
+  inventoryItems     Inventory[]
+  customers          Customer[]
+  customerGroups     CustomerGroup[]
+  promotions         Promotion[]
+  deliveryPartners   DeliveryPartner[]
+  purchasesOrg       PurchaseOrg[]
+  suppliers          Supplier[]
+  customerReceives   CustomerReceive[]
+  supplierPayments   SupplierPayment[]
+  accounts           AccountOrg[]
+  transactions       Transaction[]
+  attendances        Attendance[]
+  expenses           Expense[]
+  incomes            Income[]
+  saleReturns        SaleReturn[]
+  purchaseReturns    PurchaseReturn[]
+  settings           Setting[]
+  installments       Installment[]
+  warranties         Warranty[]
+  payrolls           Payroll[]
+  fixedAssets        FixedAsset[]
+  bookings           Booking[]
+  quotations         Quotation[]
+  transfers          Transfer[]
+  damages            Damage[]
+  categories         Category[]
+  racks              Rack[]
+  units              Unit[]
+  attributes         Attribute[]
+  brands             Brand[]
+  employees          Employee[]
+  roles              Role[]
+  expenseCategories  ExpenseCategory[]
+  incomeItems        IncomeItem[]
+
+  @@map("organization")
+}
+
+// Member model for organization membership
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@map("member")
+}
+
+// Invitation model for inviting users to organizations
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@map("invitation")
+}
+
+// Purchase type enum for subscription or one-time purchases
+enum PurchaseType {
+  SUBSCRIPTION
+  ONE_TIME
+}
+
+// Purchase model for user/organization purchases
+model Purchase {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           PurchaseType
+  customerId     String
+  subscriptionId String?       @unique
+  productId      String
+  status         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([subscriptionId])
+  @@map("purchase")
+}
+
+// AiChat model for AI chat history
+model AiChat {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String?
+  messages       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("ai_chat")
+}
+
+// Outlet model for store locations
+model Outlet {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  location       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  sales          Sale[]
+  inventoryItems Inventory[]
+  transfersFrom  Transfer[]   @relation("fromOutlet")
+  transfersTo    Transfer[]   @relation("toOutlet")
+
+  @@map("outlet")
+}
+
+// Sale model for POS transactions
+model Sale {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outletId       String
+  outlet         Outlet       @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId     String?
+  customer       Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  totalAmount    Float
+  status         String       @default("completed")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  saleItems      SaleItem[]
+  saleReturns    SaleReturn[]
+  installments   Installment[]
+
+  @@map("sale")
+}
+
+// SaleItem model for items in a sale
+model SaleItem {
+  id         String    @id @default(cuid())
+  saleId     String
+  sale       Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("sale_item")
+}
+
+// Product model for items sold or purchased
+model Product {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId        String?
+  brand          Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  unitId         String?
+  unit           Unit?        @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  rackId         String?
+  rack           Rack?        @relation(fields: [rackId], references: [id], onDelete: SetNull)
+  price          Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  saleItems      SaleItem[]
+  inventoryItems Inventory[]
+  variations     Variation[]
+  purchaseItems  PurchaseItem[]
+  warranties     Warranty[]
+  transfers      Transfer[]
+  damages        Damage[]
+
+  @@map("product")
+}
+
+// Category model for product categorization
+model Category {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       Product[]
+
+  @@map("category")
+}
+
+// Rack model for storage locations
+model Rack {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       Product[]
+
+  @@map("rack")
+}
+
+// Unit model for measurement units
+model Unit {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       Product[]
+
+  @@map("unit")
+}
+
+// Variation model for product variations (e.g., size, color)
+model Variation {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeId String
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("variation")
+}
+
+// Attribute model for variation attributes (e.g., size, color)
+model Attribute {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  variations     Variation[]
+
+  @@map("attribute")
+}
+
+// Brand model for product brands
+model Brand {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       Product[]
+
+  @@map("brand")
+}
+
+// Inventory model for stock tracking
+model Inventory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outletId       String
+  outlet         Outlet       @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("inventory")
+}
+
+// Customer model for customer management
+model Customer {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  groupId        String?
+  group          CustomerGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sales          Sale[]
+  customerReceives CustomerReceive[]
+  installments   Installment[]
+  bookings       Booking[]
+  quotations     Quotation[]
+
+  @@map("customer")
+}
+
+// CustomerGroup model for grouping customers
+model CustomerGroup {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  customers      Customer[]
+
+  @@map("customer_group")
+}
+
+// Promotion model for discounts and offers
+model Promotion {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  discount       Float
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("promotion")
+}
+
+// DeliveryPartner model for delivery services
+model DeliveryPartner {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  contact        String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("delivery_partner")
+}
+
+// PurchaseOrg model for procurement from suppliers
+model PurchaseOrg {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplierId     String
+  supplier       Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  totalAmount    Float
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  purchaseItems  PurchaseItem[]
+  purchaseReturns PurchaseReturn[]
+
+  @@map("purchase_org")
+}
+
+// PurchaseItem model for items in a purchase
+model PurchaseItem {
+  id         String      @id @default(cuid())
+  purchaseId String
+  purchase   PurchaseOrg @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@map("purchase_item")
+}
+
+// Supplier model for supplier management
+model Supplier {
+  id               String          @id @default(cuid())
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name             String
+  contact          String?
+  address          String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  purchases        PurchaseOrg[]
+  supplierPayments SupplierPayment[]
+
+  @@map("supplier")
+}
+
+// CustomerReceive model for customer payments
+model CustomerReceive {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount         Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("customer_receive")
+}
+
+// SupplierPayment model for supplier payments
+model SupplierPayment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplierId     String
+  supplier       Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  amount         Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("supplier_payment")
+}
+
+// AccountOrg model for accounting accounts
+model AccountOrg {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  type           String // e.g., "Asset", "Liability"
+  balance        Float  @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  transactions   Transaction[]
+
+  @@map("account_org")
+}
+
+// Transaction model for financial transactions
+model Transaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        AccountOrg   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type           String // e.g., "Deposit", "Withdraw"
+  amount         Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("transaction")
+}
+
+// Attendance model for employee attendance
+model Attendance {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date           DateTime
+  status         String // e.g., "Present", "Absent"
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("attendance")
+}
+
+// Employee model for staff management
+model Employee {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  attendances    Attendance[]
+  payrolls       Payroll[]
+
+  @@map("employee")
+}
+
+// Role model for employee roles
+model Role {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  permissions    Json? // e.g., { "sales": ["read", "write"] }
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  employees      Employee[]
+
+  @@map("role")
+}
+
+// Expense model for expense tracking
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amount         Float
+  description    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("expense")
+}
+
+// ExpenseCategory model for expense categorization
+model ExpenseCategory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  expenses       Expense[]
+
+  @@map("expense_category")
+}
+
+// Income model for income tracking
+model Income {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  itemId         String
+  item           IncomeItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  amount         Float
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("income")
+}
+
+// IncomeItem model for income categorization
+model IncomeItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  incomes        Income[]
+
+  @@map("income_item")
+}
+
+// SaleReturn model for sale returns
+model SaleReturn {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  saleId         String
+  sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  reason         String
+  amount         Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("sale_return")
+}
+
+// PurchaseReturn model for purchase returns
+model PurchaseReturn {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseId     String
+  purchase       PurchaseOrg  @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  reason         String
+  amount         Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("purchase_return")
+}
+
+// Setting model for organization configurations
+model Setting {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String // e.g., "tax_rate"
+  value          Json // e.g., { "rate": 0.15 }
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("setting")
+}
+
+// Installment model for installment payments
+model Installment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  saleId         String
+  sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  totalAmount    Float
+  paidAmount     Float        @default(0)
+  dueDate        DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("installment")
+}
+
+// Warranty model for product warranties
+model Warranty {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  duration       Int // Duration in months
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("warranty")
+}
+
+// Payroll model for employee payroll
+model Payroll {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount         Float
+  period         String // e.g., "2023-10"
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("payroll")
+}
+
+// FixedAsset model for fixed assets
+model FixedAsset {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  purchaseDate   DateTime
+  value          Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("fixed_asset")
+}
+
+// Booking model for customer bookings
+model Booking {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  date           DateTime
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("booking")
+}
+
+// Quotation model for customer quotations
+model Quotation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  totalAmount    Float
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("quotation")
+}
+
+// Transfer model for stock transfers between outlets
+model Transfer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromOutletId   String
+  fromOutlet     Outlet       @relation("fromOutlet", fields: [fromOutletId], references: [id], onDelete: Cascade)
+  toOutletId     String
+  toOutlet       Outlet       @relation("toOutlet", fields: [toOutletId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("transfer")
+}
+
+// Damage model for damaged items
+model Damage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity       Int
+  reason         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("damage")
+}
