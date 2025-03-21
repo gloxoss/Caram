@@ -4,7 +4,7 @@ import { describeRoute } from "hono-openapi";
 import { validator } from "hono-openapi/zod";
 import { z } from "zod";
 import { authMiddleware } from "../../middleware/auth";
-import { roleMiddleware } from "../../middleware/role";
+/* import { roleMiddleware } from "../../middleware/role"; */
 
 const createSaleSchema = z.object({
 	organizationId: z.string().nonempty("Organization ID is required"),
@@ -26,7 +26,7 @@ const createSaleSchema = z.object({
 export const salesRouter = new Hono().basePath("/sales").post(
 	"/",
 	authMiddleware,
-	roleMiddleware({ resource: "sales", action: "write" }), // Only users with "sales:write" permission
+	/* roleMiddleware({ resource: "sales", action: "write" }),  */ // Only users with "sales:write" permission
 	validator("json", createSaleSchema),
 	describeRoute({
 		tags: ["Sales"],

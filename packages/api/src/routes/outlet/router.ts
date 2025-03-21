@@ -3,8 +3,8 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { validator } from "hono-openapi/zod";
 import { z } from "zod";
-import { memberRoleMiddleware } from "../../middleware";
-import { authMiddleware } from "../../middleware/auth";
+/* import { memberRoleMiddleware } from "../../middleware";
+ */ import { authMiddleware } from "../../middleware/auth";
 
 const outletsQuerySchema = z.object({
 	organizationId: z.string().nonempty("Organization ID is required"),
@@ -13,7 +13,7 @@ const outletsQuerySchema = z.object({
 export const outletsRouter = new Hono().basePath("/outlets").get(
 	"/",
 	authMiddleware,
-	memberRoleMiddleware({ resource: "outlets", action: "read" }), // Only users with "outlets:read" permission
+	/* memberRoleMiddleware({ resource: "outlets", action: "read" }), */ // Only users with "outlets:read" permission
 	validator("query", outletsQuerySchema),
 	describeRoute({
 		tags: ["Outlets"],

@@ -15,7 +15,9 @@ import { contactRouter } from "./routes/contact/router";
 import { healthRouter } from "./routes/health";
 import { newsletterRouter } from "./routes/newsletter";
 import { organizationsRouter } from "./routes/organizations/router";
+import { outletsRouter } from "./routes/outlet/router";
 import { paymentsRouter } from "./routes/payments/router";
+import { salesRouter } from "./routes/sale/route";
 import { uploadsRouter } from "./routes/uploads";
 import { webhooksRouter } from "./routes/webhooks";
 
@@ -34,7 +36,9 @@ const appRouter = app
 	.route("/", newsletterRouter)
 	.route("/", organizationsRouter)
 	.route("/", adminRouter)
-	.route("/", healthRouter);
+	.route("/", healthRouter)
+	.route("/", outletsRouter)
+	.route("/", salesRouter);
 
 app.get(
 	"/app-openapi",
