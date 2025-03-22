@@ -1,3 +1,4 @@
+import { getBaseUrl } from "@repo/utils";
 import {
 	adminClient,
 	inferAdditionalFields,
@@ -9,6 +10,7 @@ import { createAuthClient } from "better-auth/react";
 import type { auth } from ".";
 
 export const authClient = createAuthClient({
+	baseURL: getBaseUrl(),
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
 		magicLinkClient(),

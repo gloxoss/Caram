@@ -11,11 +11,18 @@ import { loggerMiddleware } from "./middleware/logger";
 import { adminRouter } from "./routes/admin/router";
 import { aiRouter } from "./routes/ai";
 import { authRouter } from "./routes/auth";
+import { brandRouter } from "./routes/brand/route";
+import { categoryRouter } from "./routes/category/route";
 import { contactRouter } from "./routes/contact/router";
 import { healthRouter } from "./routes/health";
+import { inventoryRouter } from "./routes/inventory/route";
+import { membersRouter } from "./routes/members/router";
 import { newsletterRouter } from "./routes/newsletter";
 import { organizationsRouter } from "./routes/organizations/router";
 import { paymentsRouter } from "./routes/payments/router";
+import { productRouter } from "./routes/product/route";
+import { rackRouter } from "./routes/rack/route";
+import { unitRouter } from "./routes/unit/route";
 import { uploadsRouter } from "./routes/uploads";
 import { webhooksRouter } from "./routes/webhooks";
 
@@ -34,7 +41,14 @@ const appRouter = app
 	.route("/", newsletterRouter)
 	.route("/", organizationsRouter)
 	.route("/", adminRouter)
-	.route("/", healthRouter);
+	.route("/", healthRouter)
+	.route("/", membersRouter)
+	.route("/", categoryRouter)
+	.route("/", brandRouter)
+	.route("/", unitRouter)
+	.route("/", rackRouter)
+	.route("/", productRouter)
+	.route("/", inventoryRouter);
 
 app.get(
 	"/app-openapi",
@@ -71,7 +85,6 @@ app.get("/openapi", async (c) => {
 app.get(
 	"/docs",
 	apiReference({
-		theme: "saturn",
 		spec: {
 			url: "/api/openapi",
 		},

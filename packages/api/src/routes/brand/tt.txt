@@ -1,0 +1,115 @@
+The goal is to create an Inventory Management API that:
+Manages stock levels per product across multiple locations (e.g., outlets).
+
+Supports complex operations like stock adjustments and transfers.
+
+Provides detailed querying, filtering, and reporting capabilities.
+
+Ensures data consistency and auditability.
+
+Is flexible and extensible for future enhancements.
+
+Features
+Stock Management:
+Track inventory per product per outlet.
+
+Adjust stock levels (add or deduct) with validation to prevent negative stock.
+
+Transfer stock between outlets atomically.
+
+Advanced Querying:
+List inventory with filters (product, outlet, quantity), pagination, and sorting.
+
+Retrieve total stock per product or per outlet.
+
+Identify products with low stock levels.
+
+Auditing:
+Log all stock changes (adjustments, transfers) for traceability.
+
+Provide access to change history.
+
+Robustness:
+Use transactions to handle concurrency and ensure data integrity.
+
+Implement error handling for insufficient stock or invalid operations.
+
+Security:
+Assume role-based access control (e.g., only managers can adjust stock), handled via middleware.
+
+
+1. List Inventory Items
+Endpoint: GET /inventory
+
+Description: Retrieve a list of inventory items with filtering, pagination, and sorting.
+
+Query Parameters:
+productId: Filter by product (optional).
+
+outletId: Filter by outlet (optional).
+
+minQuantity: Filter items with quantity ≥ this value (optional).
+
+maxQuantity: Filter items with quantity ≤ this value (optional).
+
+search: Search product name (optional).
+
+limit: Items per page (default: 20).
+
+offset: Items to skip (default: 0).
+
+sortBy: Field to sort by (e.g., "quantity", "productName").
+
+sortOrder: "asc" or "desc" (default: "asc").
+
+
+2. Adjust Stock Levels
+Endpoint: POST /inventory/adjust
+
+Description: Add or deduct stock for a product in an outlet, with logging.
+
+
+3. Transfer Stock Between Outlets
+Endpoint: POST /inventory/transfer
+
+Description: Move stock from one outlet to another atomically.
+
+
+4. Get Stock Levels
+Endpoint: GET /inventory/stock
+
+Description: Retrieve stock for a product, either per outlet or total across all outlets.
+
+Query Parameters:
+productId: Required.
+
+outletId: Optional (if omitted, returns total stock).
+
+
+5. Get Low Stock Products
+Endpoint: GET /inventory/low-stock
+
+Description: List products below a stock threshold, per outlet or across all outlets.
+
+Query Parameters:
+threshold: Stock level below which items are considered low (default: 10).
+
+outletId: Optional (if omitted, checks total stock).
+
+
+6. Get Inventory Change Log
+Endpoint: GET /inventory/{id}/log
+
+Description: Retrieve the history of changes for an inventory item.
+
+
+Implementation Notes
+Concurrency: Transactions (db.$transaction) ensure atomicity for adjustments and transfers, preventing race conditions.
+
+Error Handling: Checks for insufficient stock and non-existing inventory prevent invalid states.
+
+Performance: Add indexes on productId and outletId in the Inventory table for faster queries.
+
+Security: Integrate authentication middleware to set c.get("user").id and enforce role-based permissions (e.g., only managers can adjust stock).
+
+Extensibility: The design supports future additions like unit conversions or reservations by adjusting the data model and endpoints.
