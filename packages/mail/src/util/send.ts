@@ -30,32 +30,41 @@ export async function sendEmail<T extends TemplateId>(
 	let text: string;
 	let subject: string;
 
-	if ("templateId" in params) {
-		const { templateId, context } = params;
-		const template = await getTemplate({
-			templateId,
-			context,
-			locale,
-		});
-		subject = template.subject;
-		text = template.text;
-		html = template.html;
-	} else {
-		subject = params.subject;
-		text = params.text ?? "";
-		html = params.html ?? "";
-	}
-
 	try {
+		if ("templateId" in params) {
+			const { templateId, context } = params;
+			logger.info(`Preparing email template: ${templateId}`, { to });
+			const template = await getTemplate({
+				templateId,
+				context,
+				locale,
+			});
+			subject = template.subject;
+			text = template.text;
+			html = template.html;
+		} else {
+			subject = params.subject;
+			text = params.text ?? "";
+			html = params.html ?? "";
+		}
+
+		logger.info(`Sending email to ${to}`, { subject });
+		
 		await send({
 			to,
 			subject,
 			text,
 			html,
 		});
+		
+		logger.info(`Successfully sent email to ${to}`, { subject });
 		return true;
 	} catch (e) {
-		logger.error(e);
+		logger.error(`Failed to send email to ${to}`, { 
+			error: e instanceof Error ? e.message : String(e),
+			stack: e instanceof Error ? e.stack : undefined,
+			params 
+		});
 		return false;
 	}
 }
