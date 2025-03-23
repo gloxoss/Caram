@@ -1,0 +1,60 @@
+// Attendance model for employee attendance
+model Attendance {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date           DateTime
+  status         String // e.g., "PRESENT", "ABSENT", "LATE", "HALF_DAY", "ON_LEAVE", "HOLIDAY", "WEEKEND"
+  checkInTime    String?      // Format: HH:MM (24-hour)
+  checkOutTime   String?      // Format: HH:MM (24-hour)
+  workHours      Float?       // Calculated work hours
+  leaveType      String?      // Only applicable if status is "ON_LEAVE"
+  notes          String?      // Any additional notes
+  locationCheckIn String?     // JSON string with latitude, longitude, address
+  locationCheckOut String?    // JSON string with latitude, longitude, address
+  photoCheckIn   String?      // URL or Base64 of check-in photo
+  photoCheckOut  String?      // URL or Base64 of check-out photo
+  isManualEntry  Boolean      @default(false) // Whether this was manually entered or from check-in/out
+  createdById    String?      // User who created this record
+  updatedById    String?      // User who last updated this record
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("attendance")
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
+}
+
+// LeaveRequest model for employee leave management
+model LeaveRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  endDate        DateTime
+  leaveType      String       // e.g., "SICK", "VACATION", "PERSONAL", etc.
+  reason         String
+  contactInfo    String?      // Contact information during leave
+  isHalfDay      Boolean      @default(false)
+  numberOfDays   Float        // Calculated number of days
+  status         String       // "PENDING", "APPROVED", "REJECTED"
+  notes          String?      // Additional notes (especially for approval/rejection)
+  documents      String[]     // URLs to supporting documents
+  approvedDays   Float?       // In case of partial approval
+  approvedById   String?      // User who approved/rejected
+  approvedAt     DateTime?    // When it was approved/rejected
+  createdById    String?      // User who created this request
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("leave_request")
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([status])
+}

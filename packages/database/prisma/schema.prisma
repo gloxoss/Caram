@@ -148,6 +148,7 @@ model Organization {
   expenses           Expense[]
   incomes            Income[]
   saleReturns        SaleReturn[]
+  purchaseOrders     PurchaseOrder[]
   purchaseReturns    PurchaseReturn[]
   settings           Setting[]
   installments       Installment[]
@@ -167,6 +168,8 @@ model Organization {
   roles              Role[]
   expenseCategories  ExpenseCategory[]
   incomeItems        IncomeItem[]
+  leaveRequests      LeaveRequest[]
+  shipments          Shipment[]
 
   @@map("organization")
 }
@@ -243,13 +246,22 @@ model AiChat {
 
 // Outlet model for store locations
 model Outlet {
-  id             String       @id @default(cuid())
+  id             String     @id @default(uuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
   location       String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?
+  isMain         Boolean    @default(false)
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   sales          Sale[]
   inventoryItems Inventory[]
   transfersFrom  Transfer[]   @relation("fromOutlet")
@@ -321,6 +333,7 @@ model Product {
   warranties     Warranty[]
   transfers      Transfer[]
   damages        Damage[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@map("product")
 }
@@ -473,15 +486,87 @@ model Promotion {
 
 // DeliveryPartner model for delivery services
 model DeliveryPartner {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  contact        String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                 String         @id @default(cuid())
+  organizationId     String
+  organization       Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  code               String?
+  contactPerson      String?
+  email              String?
+  phone              String?
+  website            String?
+  address            String?
+  logo               String?
+  status             String         @default("ACTIVE")
+  supportedMethods   String[]       @default([])
+  trackingUrlTemplate String?
+  apiEndpoint        String?
+  apiKey             String?
+  apiSecret          String?
+  notes              String?
+  serviceAreas       String[]       @default([])
+  settings           Json?
+  customFields       Json?
+  createdById        String?
+  updatedById        String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  shippingRates      ShippingRate[]
+  shipments          Shipment[]
 
   @@map("delivery_partner")
+}
+
+// ShippingRate model for delivery partner rates
+model ShippingRate {
+  id                   String          @id @default(cuid())
+  deliveryPartnerId    String
+  deliveryPartner      DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
+  organizationId       String
+  name                 String
+  method               String
+  baseRate             Float
+  perKgRate            Float?
+  minWeight            Float?
+  maxWeight            Float?
+  fromLocation         String?
+  toLocation           String?
+  estimatedDeliveryDays Int?
+  isActive             Boolean         @default(true)
+  conditions           Json?
+  createdById          String?
+  updatedById          String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@map("shipping_rate")
+}
+
+// Shipment model for tracking deliveries
+model Shipment {
+  id                   String          @id @default(cuid())
+  organizationId       String
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveryPartnerId    String
+  deliveryPartner      DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
+  trackingNumber       String?
+  status               String          @default("PENDING")
+  fromAddress          String?
+  toAddress            String
+  weight               Float?
+  dimensions           Json?
+  shippingMethod       String?
+  shippingCost         Float?
+  estimatedDelivery    DateTime?
+  actualDelivery       DateTime?
+  notes                String?
+  trackingHistory      Json?
+  createdById          String?
+  updatedById          String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@map("shipment")
 }
 
 // PurchaseOrg model for procurement from suppliers
@@ -529,6 +614,7 @@ model Supplier {
   updatedAt        DateTime        @updatedAt
   purchases        PurchaseOrg[]
   supplierPayments SupplierPayment[]
+  purchaseOrders   PurchaseOrder[]
 
   @@map("supplier")
 }
@@ -599,12 +685,60 @@ model Attendance {
   employeeId     String
   employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   date           DateTime
-  status         String // e.g., "Present", "Absent"
+  status         String // e.g., "PRESENT", "ABSENT", "LATE", "HALF_DAY", "ON_LEAVE", "HOLIDAY", "WEEKEND"
+  checkInTime    String?      // Format: HH:MM (24-hour)
+  checkOutTime   String?      // Format: HH:MM (24-hour)
+  workHours      Float?       // Calculated work hours
+  leaveType      String?      // Only applicable if status is "ON_LEAVE"
+  notes          String?      // Any additional notes
+  locationCheckIn String?     // JSON string with latitude, longitude, address
+  locationCheckOut String?    // JSON string with latitude, longitude, address
+  photoCheckIn   String?      // URL or Base64 of check-in photo
+  photoCheckOut  String?      // URL or Base64 of check-out photo
+  isManualEntry  Boolean      @default(false) // Whether this was manually entered or from check-in/out
+  createdById    String?      // User who created this record
+  updatedById    String?      // User who last updated this record
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@map("attendance")
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
 }
+
+// LeaveRequest model for employee leave management
+model LeaveRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  endDate        DateTime
+  leaveType      String       // e.g., "SICK", "VACATION", "PERSONAL", etc.
+  reason         String
+  contactInfo    String?      // Contact information during leave
+  isHalfDay      Boolean      @default(false)
+  numberOfDays   Float        // Calculated number of days
+  status         String       // "PENDING", "APPROVED", "REJECTED"
+  notes          String?      // Additional notes (especially for approval/rejection)
+  documents      String[]     // URLs to supporting documents
+  approvedDays   Float?       // In case of partial approval
+  approvedById   String?      // User who approved/rejected
+  approvedAt     DateTime?    // When it was approved/rejected
+  createdById    String?      // User who created this request
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("leave_request")
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+
 
 // Employee model for staff management
 model Employee {
@@ -619,6 +753,7 @@ model Employee {
   updatedAt      DateTime     @updatedAt
   attendances    Attendance[]
   payrolls       Payroll[]
+  leaveRequests  LeaveRequest[]
 
   @@map("employee")
 }
@@ -860,4 +995,39 @@ model Damage {
   updatedAt      DateTime     @updatedAt
 
   @@map("damage")
+}
+
+model PurchaseOrder {
+  id                   String               @id @default(cuid())
+  poNumber             String               @unique
+  organizationId       String
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplierId           String
+  supplier             Supplier             @relation(fields: [supplierId], references: [id])
+  status               String               @default("DRAFT")
+  orderDate            DateTime?
+  expectedDeliveryDate DateTime?
+  totalAmount          Float                @default(0)
+  notes                String?
+  items                PurchaseOrderItem[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([organizationId])
+  @@index([supplierId])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  unitPrice       Float
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([productId])
 }

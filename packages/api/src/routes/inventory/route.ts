@@ -120,6 +120,32 @@ enum InventoryChangeType {
 	TRANSFER_OUT = "TRANSFER_OUT",
 }
 
+// Add a new endpoint to analyze inventory distribution across outlets
+const inventoryDistributionSchema = z.object({
+	organizationId: z.string().nonempty("Organization ID is required"),
+	productId: z.string().optional(),
+	categoryId: z.string().optional(),
+});
+
+// Add a schema for bulk transfer between outlets
+const bulkTransferStockSchema = z.object({
+	organizationId: z.string().nonempty("Organization ID is required"),
+	fromOutletId: z.string().nonempty("Source outlet ID is required"),
+	toOutletId: z.string().nonempty("Destination outlet ID is required"),
+	transfers: z
+		.array(
+			z.object({
+				productId: z.string().nonempty("Product ID is required"),
+				quantity: z
+					.number()
+					.int()
+					.positive("Quantity must be positive"),
+			}),
+		)
+		.min(1, "At least one product transfer is required"),
+	reason: z.string().optional(),
+});
+
 export const inventoryRouter = new Hono()
 	.basePath("/inventory")
 	// 1. List Inventory Items
@@ -510,7 +536,7 @@ export const inventoryRouter = new Hono()
 				}
 
 				// Check if destination inventory exists
-				let destinationInventory = await tx.inventory.findFirst({
+				const destinationInventory = await tx.inventory.findFirst({
 					where: {
 						organizationId,
 						outletId: toOutletId,
@@ -525,23 +551,22 @@ export const inventoryRouter = new Hono()
 				});
 
 				// Create or update destination inventory
-				if (destinationInventory) {
-					destinationInventory = await tx.inventory.update({
-						where: { id: destinationInventory.id },
-						data: {
-							quantity: destinationInventory.quantity + quantity,
-						},
-					});
-				} else {
-					destinationInventory = await tx.inventory.create({
-						data: {
-							organizationId,
-							outletId: toOutletId,
-							productId,
-							quantity,
-						},
-					});
-				}
+				const updatedDest = destinationInventory
+					? await tx.inventory.update({
+							where: { id: destinationInventory.id },
+							data: {
+								quantity:
+									destinationInventory.quantity + quantity,
+							},
+						})
+					: await tx.inventory.create({
+							data: {
+								organizationId,
+								outletId: toOutletId,
+								productId,
+								quantity,
+							},
+						});
 
 				// Create logs for source and destination
 				const sourceLog = {
@@ -556,10 +581,10 @@ export const inventoryRouter = new Hono()
 				};
 
 				const destinationLog = {
-					inventoryId: destinationInventory.id,
+					inventoryId: updatedDest.id,
 					changeType: InventoryChangeType.TRANSFER_IN,
-					quantityBefore: destinationInventory.quantity - quantity,
-					quantityAfter: destinationInventory.quantity,
+					quantityBefore: updatedDest.quantity - quantity,
+					quantityAfter: updatedDest.quantity,
 					changeAmount: quantity,
 					userId: user.id,
 					reason: reason || `Transfer from outlet ${fromOutletId}`,
@@ -568,7 +593,7 @@ export const inventoryRouter = new Hono()
 
 				return {
 					sourceInventory: updatedSourceInventory,
-					destinationInventory,
+					destinationInventory: updatedDest,
 					sourceLog,
 					destinationLog,
 				};
@@ -1801,5 +1826,735 @@ export const inventoryRouter = new Hono()
 			} catch (error) {
 				return c.json({ error: "Failed to delete inventory" }, 500);
 			}
+		},
+	)
+
+	// Get inventory distribution across outlets
+	.get(
+		"/distribution",
+		authMiddleware,
+		validator("query", inventoryDistributionSchema),
+		describeRoute({
+			tags: ["Inventory"],
+			summary: "Get inventory distribution across outlets",
+			description:
+				"Analyze how inventory is distributed across different outlets",
+			/* parameters: [
+				{
+					name: "organizationId",
+					in: "query",
+					required: true,
+					schema: { type: "string" },
+				},
+				{
+					name: "productId",
+					in: "query",
+					required: false,
+					schema: { type: "string" },
+				},
+				{
+					name: "categoryId",
+					in: "query",
+					required: false,
+					schema: { type: "string" },
+				},
+			], */
+			responses: {
+				200: {
+					description: "Inventory distribution analysis",
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								properties: {
+									outlets: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: {
+												outletId: { type: "string" },
+												outletName: { type: "string" },
+												totalItems: { type: "number" },
+												totalQuantity: {
+													type: "number",
+												},
+												totalValue: { type: "number" },
+												itemsPercentage: {
+													type: "number",
+												},
+												quantityPercentage: {
+													type: "number",
+												},
+												valuePercentage: {
+													type: "number",
+												},
+											},
+										},
+									},
+									totalItems: { type: "number" },
+									totalQuantity: { type: "number" },
+									totalValue: { type: "number" },
+								},
+							},
+						},
+					},
+				},
+				400: {
+					description: "Invalid query parameters",
+				},
+			},
+		}),
+		async (c) => {
+			const { organizationId, productId, categoryId } =
+				c.req.valid("query");
+
+			// Build the query filter
+			const where: any = { organizationId };
+
+			if (productId) {
+				where.productId = productId;
+			}
+
+			if (categoryId) {
+				where.product = { categoryId };
+			}
+
+			// Get all outlets for this organization
+			const outlets = await db.outlet.findMany({
+				where: { organizationId },
+				select: { id: true, name: true },
+			});
+
+			// Get inventory data with product information
+			const inventoryItems = await db.inventory.findMany({
+				where,
+				include: {
+					product: {
+						select: {
+							id: true,
+							name: true,
+							price: true,
+						},
+					},
+					outlet: {
+						select: { id: true, name: true },
+					},
+				},
+			});
+
+			// Calculate distribution metrics
+			let totalItems = 0;
+			let totalQuantity = 0;
+			let totalValue = 0;
+
+			const outletStats = new Map();
+
+			// Initialize stats for all outlets (even those with no inventory)
+			outlets.forEach((outlet) => {
+				outletStats.set(outlet.id, {
+					outletId: outlet.id,
+					outletName: outlet.name,
+					totalItems: 0,
+					totalQuantity: 0,
+					totalValue: 0,
+					itemsPercentage: 0,
+					quantityPercentage: 0,
+					valuePercentage: 0,
+				});
+			});
+
+			// Calculate totals and outlet-specific stats
+			inventoryItems.forEach((item) => {
+				const itemValue = item.quantity * item.product.price;
+				totalItems++;
+				totalQuantity += item.quantity;
+				totalValue += itemValue;
+
+				// Update outlet stats
+				const outletStat = outletStats.get(item.outletId);
+				if (outletStat) {
+					outletStat.totalItems++;
+					outletStat.totalQuantity += item.quantity;
+					outletStat.totalValue += itemValue;
+				}
+			});
+
+			// Calculate percentages
+			outletStats.forEach((stat) => {
+				stat.itemsPercentage =
+					totalItems > 0 ? (stat.totalItems / totalItems) * 100 : 0;
+				stat.quantityPercentage =
+					totalQuantity > 0
+						? (stat.totalQuantity / totalQuantity) * 100
+						: 0;
+				stat.valuePercentage =
+					totalValue > 0 ? (stat.totalValue / totalValue) * 100 : 0;
+			});
+
+			return c.json({
+				outlets: Array.from(outletStats.values()),
+				totalItems,
+				totalQuantity,
+				totalValue,
+			});
+		},
+	)
+
+	// Bulk transfer stock between outlets
+	.post(
+		"/bulk-transfer",
+		authMiddleware,
+		validator("json", bulkTransferStockSchema),
+		describeRoute({
+			tags: ["Inventory"],
+			summary: "Bulk transfer stock between outlets",
+			description:
+				"Transfer multiple products between outlets in a single operation",
+			/* requestBody: {
+				content: {
+					"application/json": {
+						schema: {
+							type: "object",
+							required: [
+								"organizationId",
+								"fromOutletId",
+								"toOutletId",
+								"transfers",
+							],
+							properties: {
+								organizationId: { type: "string" },
+								fromOutletId: { type: "string" },
+								toOutletId: { type: "string" },
+								transfers: {
+									type: "array",
+									items: {
+										type: "object",
+										properties: {
+											productId: { type: "string" },
+											quantity: { type: "number" },
+										},
+									},
+								},
+								reason: { type: "string" },
+							},
+						},
+					},
+				},
+			}, */
+			responses: {
+				200: {
+					description: "Bulk transfer completed successfully",
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								properties: {
+									success: { type: "boolean" },
+									results: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: {
+												productId: { type: "string" },
+												success: { type: "boolean" },
+												fromInventory: {
+													type: "object",
+												},
+												toInventory: { type: "object" },
+												error: { type: "string" },
+											},
+										},
+									},
+									failedTransfers: { type: "number" },
+									successfulTransfers: { type: "number" },
+								},
+							},
+						},
+					},
+				},
+				400: {
+					description: "Invalid input or failed transfers",
+				},
+				401: {
+					description: "Unauthorized",
+				},
+			},
+		}),
+		async (c) => {
+			const {
+				organizationId,
+				fromOutletId,
+				toOutletId,
+				transfers,
+				reason,
+			} = c.req.valid("json");
+			const user = c.get("user");
+
+			// Verify that outlets exist and are different
+			if (fromOutletId === toOutletId) {
+				return c.json(
+					{
+						success: false,
+						error: "Source and destination outlets must be different",
+					},
+					400,
+				);
+			}
+
+			const [sourceOutlet, destOutlet] = await Promise.all([
+				db.outlet.findUnique({ where: { id: fromOutletId } }),
+				db.outlet.findUnique({ where: { id: toOutletId } }),
+			]);
+
+			if (!sourceOutlet || !destOutlet) {
+				return c.json(
+					{
+						success: false,
+						error: "One or both outlets not found",
+					},
+					404,
+				);
+			}
+
+			// Verify both outlets belong to the organization
+			if (
+				sourceOutlet.organizationId !== organizationId ||
+				destOutlet.organizationId !== organizationId
+			) {
+				return c.json(
+					{
+						success: false,
+						error: "Outlets must belong to the specified organization",
+					},
+					400,
+				);
+			}
+
+			// Process each transfer
+			type TransferResult = {
+				productId: string;
+				success: boolean;
+				fromInventory?: any;
+				toInventory?: any;
+				error?: string;
+			};
+
+			const results: TransferResult[] = [];
+
+			// Use transaction to ensure all transfers are atomic
+			await db.$transaction(async (tx) => {
+				for (const transfer of transfers) {
+					const { productId, quantity } = transfer;
+
+					try {
+						// Find the source inventory
+						const sourceInventory = await tx.inventory.findFirst({
+							where: {
+								organizationId,
+								outletId: fromOutletId,
+								productId,
+							},
+						});
+
+						if (!sourceInventory) {
+							results.push({
+								productId,
+								success: false,
+								error: "Source inventory not found",
+							});
+							continue;
+						}
+
+						// Check if source has enough quantity
+						if (sourceInventory.quantity < quantity) {
+							results.push({
+								productId,
+								success: false,
+								error: "Insufficient quantity in source outlet",
+							});
+							continue;
+						}
+
+						// Find or create destination inventory
+						const destinationInventory =
+							await tx.inventory.findFirst({
+								where: {
+									organizationId,
+									outletId: toOutletId,
+									productId,
+								},
+							});
+
+						// Update source inventory
+						const updatedSource = await tx.inventory.update({
+							where: { id: sourceInventory.id },
+							data: {
+								quantity: sourceInventory.quantity - quantity,
+							},
+						});
+
+						// Create or update destination inventory
+						const updatedDest = destinationInventory
+							? await tx.inventory.update({
+									where: { id: destinationInventory.id },
+									data: {
+										quantity:
+											destinationInventory.quantity +
+											quantity,
+									},
+								})
+							: await tx.inventory.create({
+									data: {
+										organizationId,
+										outletId: toOutletId,
+										productId,
+										quantity,
+									},
+								});
+
+						results.push({
+							productId,
+							success: true,
+							fromInventory: updatedSource,
+							toInventory: updatedDest,
+						});
+					} catch (error) {
+						results.push({
+							productId,
+							success: false,
+							error: "Error processing transfer",
+						});
+					}
+				}
+			});
+
+			const successfulTransfers = results.filter((r) => r.success).length;
+
+			return c.json({
+				success: successfulTransfers > 0,
+				results,
+				failedTransfers: results.length - successfulTransfers,
+				successfulTransfers,
+			});
+		},
+	)
+
+	// Get inventory levels across all outlets for a specific product
+	.get(
+		"/product/:productId/outlets",
+		authMiddleware,
+		describeRoute({
+			tags: ["Inventory"],
+			summary: "Get product inventory across outlets",
+			description:
+				"Get inventory levels for a specific product across all outlets",
+			/* parameters: [
+				{
+					name: "productId",
+					in: "path",
+					required: true,
+					schema: { type: "string" },
+				},
+				{
+					name: "organizationId",
+					in: "query",
+					required: true,
+					schema: { type: "string" },
+				},
+			], */
+			responses: {
+				200: {
+					description: "Product inventory across outlets",
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								properties: {
+									product: { type: "object" },
+									outlets: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: {
+												outletId: { type: "string" },
+												outletName: { type: "string" },
+												quantity: { type: "number" },
+											},
+										},
+									},
+									totalQuantity: { type: "number" },
+								},
+							},
+						},
+					},
+				},
+				404: {
+					description: "Product not found",
+				},
+			},
+		}),
+		async (c) => {
+			const productId = c.req.param("productId");
+			const organizationId = c.req.query("organizationId");
+
+			if (!organizationId) {
+				return c.json({ error: "Organization ID is required" }, 400);
+			}
+
+			// Verify product exists
+			const product = await db.product.findUnique({
+				where: { id: productId },
+				select: {
+					id: true,
+					name: true,
+					description: true,
+					price: true,
+					categoryId: true,
+					category: { select: { name: true } },
+				},
+			});
+
+			if (!product) {
+				return c.json({ error: "Product not found" }, 404);
+			}
+
+			// Get all outlets for this organization
+			const outlets = await db.outlet.findMany({
+				where: { organizationId },
+				select: { id: true, name: true },
+			});
+
+			// Get inventory for this product across all outlets
+			const inventoryItems = await db.inventory.findMany({
+				where: {
+					organizationId,
+					productId,
+				},
+				include: {
+					outlet: {
+						select: { id: true, name: true },
+					},
+				},
+			});
+
+			// Create a map of outlet ID to inventory
+			const outletInventoryMap = new Map();
+			inventoryItems.forEach((item) => {
+				outletInventoryMap.set(item.outletId, {
+					outletId: item.outletId,
+					outletName: item.outlet.name,
+					quantity: item.quantity,
+				});
+			});
+
+			// Create result including outlets with zero inventory
+			const outletInventory = outlets.map((outlet) => {
+				const inventory = outletInventoryMap.get(outlet.id);
+				return (
+					inventory || {
+						outletId: outlet.id,
+						outletName: outlet.name,
+						quantity: 0,
+					}
+				);
+			});
+
+			// Calculate total quantity
+			const totalQuantity = inventoryItems.reduce(
+				(sum, item) => sum + item.quantity,
+				0,
+			);
+
+			return c.json({
+				product,
+				outlets: outletInventory,
+				totalQuantity,
+			});
+		},
+	)
+
+	// Compare inventory levels for similar products across outlets
+	.get(
+		"/compare-similar",
+		authMiddleware,
+		describeRoute({
+			tags: ["Inventory"],
+			summary: "Compare similar products inventory",
+			description:
+				"Compare inventory levels of similar products (same category) across outlets",
+			/* parameters: [
+				{
+					name: "organizationId",
+					in: "query",
+					required: true,
+					schema: { type: "string" },
+				},
+				{
+					name: "categoryId",
+					in: "query",
+					required: true,
+					schema: { type: "string" },
+				},
+			], */
+			responses: {
+				200: {
+					description: "Comparison of similar products inventory",
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								properties: {
+									category: { type: "object" },
+									products: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: {
+												productId: { type: "string" },
+												productName: { type: "string" },
+												outletDistribution: {
+													type: "array",
+													items: {
+														type: "object",
+														properties: {
+															outletId: {
+																type: "string",
+															},
+															outletName: {
+																type: "string",
+															},
+															quantity: {
+																type: "number",
+															},
+														},
+													},
+												},
+												totalQuantity: {
+													type: "number",
+												},
+											},
+										},
+									},
+									outlets: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: {
+												outletId: { type: "string" },
+												outletName: { type: "string" },
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				400: {
+					description: "Invalid query parameters",
+				},
+			},
+		}),
+		async (c) => {
+			const organizationId = c.req.query("organizationId");
+			const categoryId = c.req.query("categoryId");
+
+			if (!organizationId || !categoryId) {
+				return c.json(
+					{
+						error: "Organization ID and Category ID are required",
+					},
+					400,
+				);
+			}
+
+			// Verify category exists
+			const category = await db.category.findUnique({
+				where: { id: categoryId },
+			});
+
+			if (!category) {
+				return c.json({ error: "Category not found" }, 404);
+			}
+
+			// Get all outlets for this organization
+			const outlets = await db.outlet.findMany({
+				where: { organizationId },
+				select: { id: true, name: true },
+			});
+
+			// Get all products in this category
+			const products = await db.product.findMany({
+				where: {
+					organizationId,
+					categoryId,
+				},
+				select: {
+					id: true,
+					name: true,
+				},
+			});
+
+			// Get inventory for all products in this category
+			const inventoryItems = await db.inventory.findMany({
+				where: {
+					organizationId,
+					product: {
+						categoryId,
+					},
+				},
+				include: {
+					product: {
+						select: { id: true, name: true },
+					},
+					outlet: {
+						select: { id: true, name: true },
+					},
+				},
+			});
+
+			// Process inventory data by product
+			const productInventoryMap = new Map();
+
+			// Initialize with all products
+			products.forEach((product) => {
+				productInventoryMap.set(product.id, {
+					productId: product.id,
+					productName: product.name,
+					outletDistribution: outlets.map((outlet) => ({
+						outletId: outlet.id,
+						outletName: outlet.name,
+						quantity: 0,
+					})),
+					totalQuantity: 0,
+				});
+			});
+
+			// Fill in actual inventory data
+			inventoryItems.forEach((item) => {
+				const productData = productInventoryMap.get(item.productId);
+				if (productData) {
+					// Update the specific outlet quantity
+					const outletItem = productData.outletDistribution.find(
+						(o: { outletId: string }) =>
+							o.outletId === item.outletId,
+					);
+					if (outletItem) {
+						outletItem.quantity = item.quantity;
+					}
+
+					// Update total quantity
+					productData.totalQuantity += item.quantity;
+				}
+			});
+
+			return c.json({
+				category,
+				products: Array.from(productInventoryMap.values()),
+				outlets: outlets.map((o) => ({
+					outletId: o.id,
+					outletName: o.name,
+				})),
+			});
 		},
 	);

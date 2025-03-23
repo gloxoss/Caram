@@ -3,28 +3,19 @@ import { getBaseUrl } from "@repo/utils";
 import { apiReference } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
 import { openAPISpecs } from "hono-openapi";
-import {} from "openapi-merge";
-import {} from "openapi-merge";
 import { mergeOpenApiSchemas } from "./lib/openapi-schema";
 import { corsMiddleware } from "./middleware/cors";
 import { loggerMiddleware } from "./middleware/logger";
 import { adminRouter } from "./routes/admin/router";
 import { aiRouter } from "./routes/ai";
 import { authRouter } from "./routes/auth";
-import { brandRouter } from "./routes/brand/route";
-import { categoryRouter } from "./routes/category/route";
 import { contactRouter } from "./routes/contact/router";
 import { healthRouter } from "./routes/health";
-import { inventoryRouter } from "./routes/inventory/route";
-import { membersRouter } from "./routes/members/router";
 import { newsletterRouter } from "./routes/newsletter";
 import { organizationsRouter } from "./routes/organizations/router";
 import { outletsRouter } from "./routes/outlet/router";
 import { paymentsRouter } from "./routes/payments/router";
-import { productRouter } from "./routes/product/route";
-import { rackRouter } from "./routes/rack/route";
-import { unitRouter } from "./routes/unit/route";
-
+import { salesRouter } from "./routes/sale/route";
 import { uploadsRouter } from "./routes/uploads";
 import { webhooksRouter } from "./routes/webhooks";
 
@@ -44,15 +35,8 @@ const appRouter = app
 	.route("/", organizationsRouter)
 	.route("/", adminRouter)
 	.route("/", healthRouter)
-	.route("/", membersRouter)
-	.route("/", categoryRouter)
-	.route("/", brandRouter)
-	.route("/", unitRouter)
-	.route("/", rackRouter)
-	.route("/", productRouter)
-	.route("/", inventoryRouter)
-	.route("/", outletsRouter);
-/* .route("/", salesRouter) */
+	.route("/", outletsRouter)
+	.route("/", salesRouter);
 
 app.get(
 	"/app-openapi",
@@ -89,6 +73,7 @@ app.get("/openapi", async (c) => {
 app.get(
 	"/docs",
 	apiReference({
+		theme: "saturn",
 		spec: {
 			url: "/api/openapi",
 		},

@@ -76,7 +76,7 @@ export const PurchaseScalarFieldEnumSchema = z.enum(['id','organizationId','user
 
 export const AiChatScalarFieldEnumSchema = z.enum(['id','organizationId','userId','title','messages','createdAt','updatedAt']);
 
-export const OutletScalarFieldEnumSchema = z.enum(['id','organizationId','name','location','createdAt','updatedAt']);
+export const OutletScalarFieldEnumSchema = z.enum(['id','organizationId','name','location','phone','email','address','city','state','zipCode','country','isMain','notes','createdAt','updatedAt']);
 
 export const SaleScalarFieldEnumSchema = z.enum(['id','organizationId','outletId','userId','customerId','totalAmount','status','createdAt','updatedAt']);
 
@@ -104,7 +104,11 @@ export const CustomerGroupScalarFieldEnumSchema = z.enum(['id','organizationId',
 
 export const PromotionScalarFieldEnumSchema = z.enum(['id','organizationId','name','description','discount','startDate','endDate','createdAt','updatedAt']);
 
-export const DeliveryPartnerScalarFieldEnumSchema = z.enum(['id','organizationId','name','contact','createdAt','updatedAt']);
+export const DeliveryPartnerScalarFieldEnumSchema = z.enum(['id','organizationId','name','code','contactPerson','email','phone','website','address','logo','status','supportedMethods','trackingUrlTemplate','apiEndpoint','apiKey','apiSecret','notes','serviceAreas','settings','customFields','createdById','updatedById','createdAt','updatedAt']);
+
+export const ShippingRateScalarFieldEnumSchema = z.enum(['id','deliveryPartnerId','organizationId','name','method','baseRate','perKgRate','minWeight','maxWeight','fromLocation','toLocation','estimatedDeliveryDays','isActive','conditions','createdById','updatedById','createdAt','updatedAt']);
+
+export const ShipmentScalarFieldEnumSchema = z.enum(['id','organizationId','deliveryPartnerId','trackingNumber','status','fromAddress','toAddress','weight','dimensions','shippingMethod','shippingCost','estimatedDelivery','actualDelivery','notes','trackingHistory','createdById','updatedById','createdAt','updatedAt']);
 
 export const PurchaseOrgScalarFieldEnumSchema = z.enum(['id','organizationId','supplierId','totalAmount','status','createdAt','updatedAt']);
 
@@ -120,7 +124,9 @@ export const AccountOrgScalarFieldEnumSchema = z.enum(['id','organizationId','na
 
 export const TransactionScalarFieldEnumSchema = z.enum(['id','organizationId','accountId','type','amount','createdAt','updatedAt']);
 
-export const AttendanceScalarFieldEnumSchema = z.enum(['id','organizationId','employeeId','date','status','createdAt','updatedAt']);
+export const AttendanceScalarFieldEnumSchema = z.enum(['id','organizationId','employeeId','date','status','checkInTime','checkOutTime','workHours','leaveType','notes','locationCheckIn','locationCheckOut','photoCheckIn','photoCheckOut','isManualEntry','createdById','updatedById','createdAt','updatedAt']);
+
+export const LeaveRequestScalarFieldEnumSchema = z.enum(['id','organizationId','employeeId','startDate','endDate','leaveType','reason','contactInfo','isHalfDay','numberOfDays','status','notes','documents','approvedDays','approvedById','approvedAt','createdById','createdAt','updatedAt']);
 
 export const EmployeeScalarFieldEnumSchema = z.enum(['id','organizationId','userId','roleId','createdAt','updatedAt']);
 
@@ -155,6 +161,10 @@ export const QuotationScalarFieldEnumSchema = z.enum(['id','organizationId','cus
 export const TransferScalarFieldEnumSchema = z.enum(['id','organizationId','fromOutletId','toOutletId','productId','quantity','createdAt','updatedAt']);
 
 export const DamageScalarFieldEnumSchema = z.enum(['id','organizationId','productId','quantity','reason','createdAt','updatedAt']);
+
+export const PurchaseOrderScalarFieldEnumSchema = z.enum(['id','poNumber','organizationId','supplierId','status','orderDate','expectedDeliveryDate','totalAmount','notes','createdAt','updatedAt']);
+
+export const PurchaseOrderItemScalarFieldEnumSchema = z.enum(['id','purchaseOrderId','productId','quantity','unitPrice','createdAt','updatedAt']);
 
 export const SortOrderSchema = z.enum(['asc','desc']);
 
@@ -363,10 +373,19 @@ export type AiChat = z.infer<typeof AiChatSchema>
 /////////////////////////////////////////
 
 export const OutletSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().uuid(),
   organizationId: z.string(),
   name: z.string(),
   location: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  state: z.string().nullable(),
+  zipCode: z.string().nullable(),
+  country: z.string().nullable(),
+  isMain: z.boolean(),
+  notes: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -587,12 +606,85 @@ export const DeliveryPartnerSchema = z.object({
   id: z.string().cuid(),
   organizationId: z.string(),
   name: z.string(),
-  contact: z.string().nullable(),
+  code: z.string().nullable(),
+  contactPerson: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  website: z.string().nullable(),
+  address: z.string().nullable(),
+  logo: z.string().nullable(),
+  status: z.string(),
+  supportedMethods: z.string().array(),
+  trackingUrlTemplate: z.string().nullable(),
+  apiEndpoint: z.string().nullable(),
+  apiKey: z.string().nullable(),
+  apiSecret: z.string().nullable(),
+  notes: z.string().nullable(),
+  serviceAreas: z.string().array(),
+  settings: JsonValueSchema.nullable(),
+  customFields: JsonValueSchema.nullable(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
 
 export type DeliveryPartner = z.infer<typeof DeliveryPartnerSchema>
+
+/////////////////////////////////////////
+// SHIPPING RATE SCHEMA
+/////////////////////////////////////////
+
+export const ShippingRateSchema = z.object({
+  id: z.string().cuid(),
+  deliveryPartnerId: z.string(),
+  organizationId: z.string(),
+  name: z.string(),
+  method: z.string(),
+  baseRate: z.number(),
+  perKgRate: z.number().nullable(),
+  minWeight: z.number().nullable(),
+  maxWeight: z.number().nullable(),
+  fromLocation: z.string().nullable(),
+  toLocation: z.string().nullable(),
+  estimatedDeliveryDays: z.number().int().nullable(),
+  isActive: z.boolean(),
+  conditions: JsonValueSchema.nullable(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ShippingRate = z.infer<typeof ShippingRateSchema>
+
+/////////////////////////////////////////
+// SHIPMENT SCHEMA
+/////////////////////////////////////////
+
+export const ShipmentSchema = z.object({
+  id: z.string().cuid(),
+  organizationId: z.string(),
+  deliveryPartnerId: z.string(),
+  trackingNumber: z.string().nullable(),
+  status: z.string(),
+  fromAddress: z.string().nullable(),
+  toAddress: z.string(),
+  weight: z.number().nullable(),
+  dimensions: JsonValueSchema.nullable(),
+  shippingMethod: z.string().nullable(),
+  shippingCost: z.number().nullable(),
+  estimatedDelivery: z.coerce.date().nullable(),
+  actualDelivery: z.coerce.date().nullable(),
+  notes: z.string().nullable(),
+  trackingHistory: JsonValueSchema.nullable(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Shipment = z.infer<typeof ShipmentSchema>
 
 /////////////////////////////////////////
 // PURCHASE ORG SCHEMA
@@ -715,11 +807,51 @@ export const AttendanceSchema = z.object({
   employeeId: z.string(),
   date: z.coerce.date(),
   status: z.string(),
+  checkInTime: z.string().nullable(),
+  checkOutTime: z.string().nullable(),
+  workHours: z.number().nullable(),
+  leaveType: z.string().nullable(),
+  notes: z.string().nullable(),
+  locationCheckIn: z.string().nullable(),
+  locationCheckOut: z.string().nullable(),
+  photoCheckIn: z.string().nullable(),
+  photoCheckOut: z.string().nullable(),
+  isManualEntry: z.boolean(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
 
 export type Attendance = z.infer<typeof AttendanceSchema>
+
+/////////////////////////////////////////
+// LEAVE REQUEST SCHEMA
+/////////////////////////////////////////
+
+export const LeaveRequestSchema = z.object({
+  id: z.string().cuid(),
+  organizationId: z.string(),
+  employeeId: z.string(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  leaveType: z.string(),
+  reason: z.string(),
+  contactInfo: z.string().nullable(),
+  isHalfDay: z.boolean(),
+  numberOfDays: z.number(),
+  status: z.string(),
+  notes: z.string().nullable(),
+  documents: z.string().array(),
+  approvedDays: z.number().nullable(),
+  approvedById: z.string().nullable(),
+  approvedAt: z.coerce.date().nullable(),
+  createdById: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type LeaveRequest = z.infer<typeof LeaveRequestSchema>
 
 /////////////////////////////////////////
 // EMPLOYEE SCHEMA
@@ -989,3 +1121,39 @@ export const DamageSchema = z.object({
 })
 
 export type Damage = z.infer<typeof DamageSchema>
+
+/////////////////////////////////////////
+// PURCHASE ORDER SCHEMA
+/////////////////////////////////////////
+
+export const PurchaseOrderSchema = z.object({
+  id: z.string().cuid(),
+  poNumber: z.string(),
+  organizationId: z.string(),
+  supplierId: z.string(),
+  status: z.string(),
+  orderDate: z.coerce.date().nullable(),
+  expectedDeliveryDate: z.coerce.date().nullable(),
+  totalAmount: z.number(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>
+
+/////////////////////////////////////////
+// PURCHASE ORDER ITEM SCHEMA
+/////////////////////////////////////////
+
+export const PurchaseOrderItemSchema = z.object({
+  id: z.string().cuid(),
+  purchaseOrderId: z.string(),
+  productId: z.string(),
+  quantity: z.number().int(),
+  unitPrice: z.number(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type PurchaseOrderItem = z.infer<typeof PurchaseOrderItemSchema>

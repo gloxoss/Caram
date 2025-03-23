@@ -1,0 +1,1 @@
+export { bookingRouter } from "./route";

@@ -1,0 +1,148 @@
+import { auth } from "@repo/auth";
+import { getBaseUrl } from "@repo/utils";
+import { apiReference } from "@scalar/hono-api-reference";
+import { Hono } from "hono";
+import { openAPISpecs } from "hono-openapi";
+import { mergeOpenApiSchemas } from "./lib/openapi-schema";
+import { corsMiddleware } from "./middleware/cors";
+import { loggerMiddleware } from "./middleware/logger";
+import { accountOrgRouter } from "./routes/account-org/router";
+import { adminRouter } from "./routes/admin/router";
+import { aiRouter } from "./routes/ai";
+import { attendanceRouter } from "./routes/attendance/router";
+import { attributeRouter } from "./routes/attribute/route";
+import { authRouter } from "./routes/auth";
+import { bookingRouter } from "./routes/booking/route";
+import { brandRouter } from "./routes/brand/route";
+import { categoryRouter } from "./routes/category/route";
+import { contactRouter } from "./routes/contact/router";
+import { customerGroupRouter } from "./routes/customer-group/route";
+import { customerRouter } from "./routes/customer/route";
+import { damageRouter } from "./routes/damage/router";
+import { deliveryPartnerRouter } from "./routes/delivery-partner/router";
+import { employeeRouter } from "./routes/employee/route";
+import { expenseRouter } from "./routes/expense/router";
+/* import { fixedAssetRouter } from "./routes/fixed-asset/route"; */
+import { healthRouter } from "./routes/health";
+import { incomeRouter } from "./routes/income/router";
+import { installmentRouter } from "./routes/installment/router";
+import { inventoryRouter } from "./routes/inventory/route";
+import { membersRouter } from "./routes/members/router";
+import { newsletterRouter } from "./routes/newsletter";
+import { organizationsRouter } from "./routes/organizations/router";
+import { outletsRouter } from "./routes/outlet/router";
+import { paymentsRouter } from "./routes/payments/router";
+/* import { payrollRouter } from "./routes/payroll/route"; */
+import { productRouter } from "./routes/product/route";
+import { promotionRouter } from "./routes/promotion/route";
+import { purchaseOrderRouter } from "./routes/purchase-order/router";
+import { purchaseOrgRouter } from "./routes/purchase-org/router";
+import { purchaseReturnRouter } from "./routes/purchase-return/router";
+import { quotationRouter } from "./routes/quotation/router";
+import { rackRouter } from "./routes/rack/route";
+import { roleRouter } from "./routes/role/route";
+import { saleReturnRouter } from "./routes/sale-return/router";
+import { salesRouter } from "./routes/sale/route";
+import { settingRouter } from "./routes/setting/router";
+import { supplierRouter } from "./routes/supplier/route";
+import { transactionRouter } from "./routes/transaction/router";
+import { transferRouter } from "./routes/transfer/router";
+import { unitRouter } from "./routes/unit/route";
+import { uploadsRouter } from "./routes/uploads";
+import { webhooksRouter } from "./routes/webhooks";
+import { installmentRoute } from "./routes/installment/route";
+
+export const app = new Hono().basePath("/api");
+
+app.use(loggerMiddleware);
+app.use(corsMiddleware);
+
+const appRouter = app
+	.route("/", authRouter)
+	.route("/", webhooksRouter)
+	.route("/", aiRouter)
+	.route("/", uploadsRouter)
+	.route("/", paymentsRouter)
+	.route("/", contactRouter)
+	.route("/", newsletterRouter)
+	.route("/", organizationsRouter)
+	.route("/", adminRouter)
+	.route("/", healthRouter)
+	.route("/", outletsRouter)
+	.route("/", salesRouter)
+	.route("/", accountOrgRouter)
+	.route("/", attributeRouter)
+	.route("/", attendanceRouter)
+	.route("/", brandRouter)
+	.route("/", bookingRouter)
+	.route("/", categoryRouter)
+	.route("/", customerRouter)
+	.route("/", customerGroupRouter)
+	.route("/", damageRouter)
+	.route("/", deliveryPartnerRouter)
+	.route("/", employeeRouter)
+	.route("/", expenseRouter)
+	.route("/", incomeRouter)
+	.route("/", installmentRouter)
+	.route("/", inventoryRouter)
+	.route("/", membersRouter)
+	/* route("/", payrollRouter) */
+	.route("/", productRouter)
+	.route("/", promotionRouter)
+	.route("/", purchaseOrderRouter)
+	.route("/", purchaseOrgRouter)
+	.route("/", purchaseReturnRouter)
+	.route("/", quotationRouter)
+	.route("/", rackRouter)
+	.route("/", roleRouter)
+	.route("/", saleReturnRouter)
+	.route("/", settingRouter)
+	.route("/", supplierRouter)
+	.route("/", transactionRouter)
+	.route("/", transferRouter)
+	.route("/", unitRouter)
+	.route("/", installmentRoute);
+/* route("/", warrantyRouter) */
+
+app.get(
+	"/app-openapi",
+	openAPISpecs(app, {
+		documentation: {
+			info: {
+				title: "supastarter API",
+				version: "1.0.0",
+			},
+			servers: [
+				{
+					url: getBaseUrl(),
+					description: "API server",
+				},
+			],
+		},
+	}),
+);
+
+app.get("/openapi", async (c) => {
+	const authSchema = await auth.api.generateOpenAPISchema();
+	const appSchema = await (
+		app.request("/api/app-openapi") as Promise<Response>
+	).then((res) => res.json());
+
+	const mergedSchema = mergeOpenApiSchemas({
+		appSchema,
+		authSchema: authSchema as any,
+	});
+
+	return c.json(mergedSchema);
+});
+
+app.get(
+	"/docs",
+	apiReference({
+		spec: {
+			url: "/api/openapi",
+		},
+	}),
+);
+
+export type AppRouter = typeof appRouter;

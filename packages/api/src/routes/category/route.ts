@@ -9,212 +9,120 @@ const categoryQuerySchema = z.object({
 	organizationId: z.string().nonempty("Organization ID is required"),
 });
 
-const categoryCreateSchema = z.object({
-	name: z.string().min(1, "Name is required"),
+const createCategorySchema = z.object({
 	organizationId: z.string().nonempty("Organization ID is required"),
+	name: z.string().nonempty("Name is required"),
 });
 
-const categoryUpdateSchema = z.object({
-	name: z.string().min(1, "Name is required"),
+const updateCategorySchema = z.object({
+	name: z.string().nonempty("Name is required"),
 });
 
 export const categoryRouter = new Hono()
-	.basePath("/categories")
+	.basePath("/category")
 	// GET all categories
 	.get(
 		"/",
 		authMiddleware,
 		validator("query", categoryQuerySchema),
 		describeRoute({
-			tags: ["Categories"],
-			summary: "List all categories for an organization",
-			description:
-				"Retrieve a list of categories associated with the specified organization ID",
+			tags: ["Category"],
+			summary: "List categories",
+			description: "Retrieve a list of categories",
 			responses: {
 				200: {
 					description: "List of categories",
-					content: {
-						"application/json": {
-							schema: {
-								type: "array",
-								items: {
-									type: "object",
-									properties: {
-										id: { type: "string" },
-										name: { type: "string" },
-										organizationId: { type: "string" },
-										createdAt: {
-											type: "string",
-											format: "date-time",
-										},
-										updatedAt: {
-											type: "string",
-											format: "date-time",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				400: {
-					description: "Invalid or missing organizationId",
-				},
-				401: {
-					description: "Unauthorized",
 				},
 			},
 		}),
 		async (c) => {
 			const { organizationId } = c.req.valid("query");
-			const categories = await db.category.findMany({
-				where: { organizationId },
-			});
-			return c.json(categories);
-		},
-	)
-	// GET a single category by ID
-	.get(
-		"/:id",
-		authMiddleware,
-		describeRoute({
-			tags: ["Categories"],
-			summary: "Get a single category by ID",
-			description:
-				"Retrieve detailed information about a specific category",
-			responses: {
-				200: {
-					description: "Category details",
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									id: { type: "string" },
-									name: { type: "string" },
-									organizationId: { type: "string" },
-									createdAt: {
-										type: "string",
-										format: "date-time",
-									},
-									updatedAt: {
-										type: "string",
-										format: "date-time",
-									},
-								},
+
+			try {
+				const categories = await db.category.findMany({
+					where: { organizationId },
+					orderBy: { name: "asc" },
+					include: {
+						_count: {
+							select: {
+								products: true,
 							},
 						},
 					},
-				},
-				404: {
-					description: "Category not found",
-				},
-				401: {
-					description: "Unauthorized",
-				},
-			},
-		}),
-		async (c) => {
-			const id = c.req.param("id");
-			const category = await db.category.findUnique({
-				where: { id },
-			});
+				});
 
-			if (!category) {
-				return c.json({ error: "Category not found" }, 404);
+				return c.json({
+					items: categories,
+					count: categories.length,
+				});
+			} catch (error) {
+				return c.json(
+					{
+						error: "Failed to fetch categories",
+						details: error,
+					},
+					500,
+				);
 			}
-
-			return c.json(category);
 		},
 	)
-	// POST create a new category
+	// CREATE a new category
 	.post(
 		"/",
 		authMiddleware,
-		validator("json", categoryCreateSchema),
+		validator("json", createCategorySchema),
 		describeRoute({
-			tags: ["Categories"],
-			summary: "Create a new category",
-			description: "Create a new category for the specified organization",
-
+			tags: ["Category"],
+			summary: "Create category",
+			description: "Create a new category",
 			responses: {
 				201: {
 					description: "Category created successfully",
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									id: { type: "string" },
-									name: { type: "string" },
-									organizationId: { type: "string" },
-									createdAt: {
-										type: "string",
-										format: "date-time",
-									},
-									updatedAt: {
-										type: "string",
-										format: "date-time",
-									},
-								},
-							},
-						},
-					},
 				},
 				400: {
 					description: "Invalid input data",
 				},
-				401: {
-					description: "Unauthorized",
-				},
 			},
 		}),
 		async (c) => {
-			const { name, organizationId } = c.req.valid("json");
+			const data = c.req.valid("json");
 
-			const category = await db.category.create({
-				data: {
-					name,
-					organizationId,
-				},
-			});
-
-			return c.json(category, 201);
-		},
-	)
-	// PUT update a category
-	.put(
-		"/:id",
-		authMiddleware,
-		validator("json", categoryUpdateSchema),
-		describeRoute({
-			tags: ["Categories"],
-			summary: "Update a category",
-			description: "Update details of an existing category",
-
-			responses: {
-				200: {
-					description: "Category updated successfully",
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									id: { type: "string" },
-									name: { type: "string" },
-									organizationId: { type: "string" },
-									createdAt: {
-										type: "string",
-										format: "date-time",
-									},
-									updatedAt: {
-										type: "string",
-										format: "date-time",
-									},
-								},
+			try {
+				const category = await db.category.create({
+					data,
+					include: {
+						_count: {
+							select: {
+								products: true,
 							},
 						},
 					},
+				});
+
+				return c.json(category, 201);
+			} catch (error) {
+				return c.json(
+					{
+						error: "Failed to create category",
+						details: error,
+					},
+					400,
+				);
+			}
+		},
+	)
+	// UPDATE a category
+	.put(
+		"/:id",
+		authMiddleware,
+		validator("json", updateCategorySchema),
+		describeRoute({
+			tags: ["Category"],
+			summary: "Update category",
+			description: "Update an existing category",
+			responses: {
+				200: {
+					description: "Category updated successfully",
 				},
 				400: {
 					description: "Invalid input data",
@@ -222,24 +130,34 @@ export const categoryRouter = new Hono()
 				404: {
 					description: "Category not found",
 				},
-				401: {
-					description: "Unauthorized",
-				},
 			},
 		}),
 		async (c) => {
-			const id = c.req.param("id");
-			const { name } = c.req.valid("json");
+			const categoryId = c.req.param("id");
+			const data = c.req.valid("json");
 
 			try {
 				const category = await db.category.update({
-					where: { id },
-					data: { name },
+					where: { id: categoryId },
+					data,
+					include: {
+						_count: {
+							select: {
+								products: true,
+							},
+						},
+					},
 				});
 
 				return c.json(category);
 			} catch (error) {
-				return c.json({ error: "Category not found" }, 404);
+				return c.json(
+					{
+						error: "Failed to update category",
+						details: error,
+					},
+					400,
+				);
 			}
 		},
 	)
@@ -248,42 +166,35 @@ export const categoryRouter = new Hono()
 		"/:id",
 		authMiddleware,
 		describeRoute({
-			tags: ["Categories"],
-			summary: "Delete a category",
-			description: "Delete an existing category",
+			tags: ["Category"],
+			summary: "Delete category",
+			description: "Delete a category",
 			responses: {
 				200: {
 					description: "Category deleted successfully",
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									success: { type: "boolean" },
-								},
-							},
-						},
-					},
 				},
 				404: {
 					description: "Category not found",
 				},
-				401: {
-					description: "Unauthorized",
-				},
 			},
 		}),
 		async (c) => {
-			const id = c.req.param("id");
+			const categoryId = c.req.param("id");
 
 			try {
 				await db.category.delete({
-					where: { id },
+					where: { id: categoryId },
 				});
 
 				return c.json({ success: true });
 			} catch (error) {
-				return c.json({ error: "Category not found" }, 404);
+				return c.json(
+					{
+						error: "Failed to delete category",
+						details: error,
+					},
+					400,
+				);
 			}
 		},
 	);
