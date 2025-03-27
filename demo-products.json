@@ -1,0 +1,185 @@
+{
+	"organizationId": "uFCEG2u6fXrpLehPKKPCY7FK51E1Juym",
+	"products": [
+		{
+			"name": "Laptop Pro X1",
+			"description": "High-performance laptop with 16GB RAM and 512GB SSD",
+			"price": 1299.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Smartphone Galaxy S22",
+			"description": "Latest smartphone with 128GB storage and 5G capability",
+			"price": 899.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Wireless Headphones",
+			"description": "Noise-cancelling wireless headphones with 30-hour battery life",
+			"price": 199.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Coffee Maker Deluxe",
+			"description": "Programmable coffee maker with thermal carafe",
+			"price": 89.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Ergonomic Office Chair",
+			"description": "Adjustable office chair with lumbar support",
+			"price": 249.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Fitness Tracker Pro",
+			"description": "Waterproof fitness tracker with heart rate monitor",
+			"price": 79.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Blender 3000",
+			"description": "High-powered blender for smoothies and food processing",
+			"price": 129.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Wireless Mouse",
+			"description": "Ergonomic wireless mouse with long battery life",
+			"price": 39.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "LED Desk Lamp",
+			"description": "Adjustable LED desk lamp with multiple brightness levels",
+			"price": 49.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Portable Bluetooth Speaker",
+			"description": "Waterproof portable speaker with 12-hour playback",
+			"price": 69.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Stainless Steel Water Bottle",
+			"description": "Insulated water bottle that keeps drinks cold for 24 hours",
+			"price": 24.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Yoga Mat Premium",
+			"description": "Non-slip yoga mat with carrying strap",
+			"price": 34.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Digital Kitchen Scale",
+			"description": "Precise digital scale for cooking and baking",
+			"price": 19.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Mechanical Keyboard",
+			"description": "RGB mechanical keyboard with customizable keys",
+			"price": 129.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Air Purifier",
+			"description": "HEPA air purifier for rooms up to 300 sq ft",
+			"price": 149.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Wireless Charging Pad",
+			"description": "Fast wireless charger compatible with all Qi devices",
+			"price": 29.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Smart Thermostat",
+			"description": "Wi-Fi enabled thermostat with energy-saving features",
+			"price": 179.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Stainless Steel Cookware Set",
+			"description": "10-piece cookware set with non-stick coating",
+			"price": 199.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Backpack Pro",
+			"description": "Water-resistant backpack with laptop compartment",
+			"price": 59.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		},
+		{
+			"name": "Smart Light Bulbs (4-pack)",
+			"description": "Color-changing smart bulbs compatible with voice assistants",
+			"price": 49.99,
+			"categoryId": "cm8ontb730005vpxgmsdcwine",
+			"brandId": "cm8onv8r10000vp403w4t37pi",
+			"unitId": "cm8onwvaw0002vp40udsi9o1g",
+			"rackId": "cm8onw43x0001vp400vv7vfnb"
+		}
+	]
+}

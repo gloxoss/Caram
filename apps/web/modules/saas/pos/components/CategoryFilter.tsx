@@ -23,7 +23,8 @@ async function fetchCategories(organizationId: string) {
 	if (!response.ok) {
 		throw new Error("Failed to fetch categories");
 	}
-	return response.json();
+	const data = await response.json();
+	return data.items || [];
 }
 
 export function CategoryFilter({ className }: CategoryFilterProps) {
@@ -38,11 +39,11 @@ export function CategoryFilter({ className }: CategoryFilterProps) {
 		enabled: !!activeOrganization?.id,
 	});
 
-	const currentCategory = searchParams.get("category") || "";
+	const currentCategory = searchParams.get("category") || "all";
 
 	function onValueChange(value: string) {
 		const params = new URLSearchParams(searchParams);
-		if (value) {
+		if (value && value !== "all") {
 			params.set("category", value);
 		} else {
 			params.delete("category");
@@ -51,18 +52,20 @@ export function CategoryFilter({ className }: CategoryFilterProps) {
 	}
 
 	return (
-		<Select value={currentCategory} onValueChange={onValueChange}>
-			<SelectTrigger className={cn("w-[180px]", className)}>
-				<SelectValue placeholder="Select a category" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectItem value="">All Categories</SelectItem>
-				{categories.map((category) => (
-					<SelectItem key={category.id} value={category.id}>
-						{category.name}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
+		<>
+			<Select value={currentCategory} onValueChange={onValueChange}>
+				<SelectTrigger className={cn("w-[180px]", className)}>
+					<SelectValue placeholder="Select a category" />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value="all">All Categories</SelectItem>
+					{categories.map((category) => (
+						<SelectItem key={category.id} value={category.id}>
+							{category.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</>
 	);
 }

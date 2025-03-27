@@ -9,12 +9,15 @@ import { loggerMiddleware } from "./middleware/logger";
 import { adminRouter } from "./routes/admin/router";
 import { aiRouter } from "./routes/ai";
 import { authRouter } from "./routes/auth";
+import { categoryRouter } from "./routes/category/route";
 import { contactRouter } from "./routes/contact/router";
 import { healthRouter } from "./routes/health";
 import { newsletterRouter } from "./routes/newsletter";
 import { organizationsRouter } from "./routes/organizations/router";
 import { outletsRouter } from "./routes/outlet/router";
 import { paymentsRouter } from "./routes/payments/router";
+import { productRouter } from "./routes/product/route";
+import { rackRouter } from "./routes/rack/route";
 import { salesRouter } from "./routes/sale/route";
 import { uploadsRouter } from "./routes/uploads";
 import { webhooksRouter } from "./routes/webhooks";
@@ -36,7 +39,10 @@ const appRouter = app
 	.route("/", adminRouter)
 	.route("/", healthRouter)
 	.route("/", outletsRouter)
-	.route("/", salesRouter);
+	.route("/", salesRouter)
+	.route("/", categoryRouter)
+	.route("/", productRouter)
+	.route("/", rackRouter);
 
 app.get(
 	"/app-openapi",
