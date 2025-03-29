@@ -4,7 +4,7 @@ import { useActiveOrganization } from "@saas/organizations/hooks/use-active-orga
 import { PageHeader } from "@saas/shared/components/PageHeader";
 import { Button } from "@ui/components/button";
 import { Card } from "@ui/components/card";
-import { Input } from "next/dist/client/components/input";
+import { Input } from "@ui/components/input";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -77,4 +77,4 @@ export default function OrganizationAddInstallmentPage() {
 				</div>
 			</Card>
 		</div>
-	);
+	)};
