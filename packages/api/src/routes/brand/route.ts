@@ -29,7 +29,7 @@ export const brandRouter = new Hono()
 			tags: ["Brands"],
 			summary: "List all brands for an organization",
 			description:
-				"Retrieve a list of brands associated with the specified organization ID",
+				"Retrieve a list of product brands associated with the specified organization ID",
 			responses: {
 				200: {
 					description: "List of brands",
@@ -80,7 +80,8 @@ export const brandRouter = new Hono()
 		describeRoute({
 			tags: ["Brands"],
 			summary: "Get a single brand by ID",
-			description: "Retrieve detailed information about a specific brand",
+			description:
+				"Retrieve detailed information about a specific product brand",
 			responses: {
 				200: {
 					description: "Brand details",
@@ -134,7 +135,8 @@ export const brandRouter = new Hono()
 		describeRoute({
 			tags: ["Brands"],
 			summary: "Create a new brand",
-			description: "Create a new brand for the specified organization",
+			description:
+				"Create a new product brand for the specified organization",
 			responses: {
 				201: {
 					description: "Brand created successfully",
@@ -188,7 +190,7 @@ export const brandRouter = new Hono()
 		describeRoute({
 			tags: ["Brands"],
 			summary: "Update a brand",
-			description: "Update details of an existing brand",
+			description: "Update details of an existing product brand",
 			responses: {
 				200: {
 					description: "Brand updated successfully",
@@ -247,7 +249,7 @@ export const brandRouter = new Hono()
 		describeRoute({
 			tags: ["Brands"],
 			summary: "Delete a brand",
-			description: "Delete an existing brand",
+			description: "Delete an existing product brand",
 			responses: {
 				200: {
 					description: "Brand deleted successfully",

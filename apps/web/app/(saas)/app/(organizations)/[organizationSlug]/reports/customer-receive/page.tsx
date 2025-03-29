@@ -1,8 +1,61 @@
-export default function CustomerReceiveReportPage() {
-  return (
-    <div>
-      <h1>Customer Receive Report</h1>
-      <p>This is the customer receive report page.</p>
-    </div>
-  );
+"use client";
+
+import { useActiveOrganization } from "@saas/organizations/hooks/use-active-organization";
+import { PageHeader } from "@saas/shared/components/PageHeader";
+import { Button } from "@ui/components/button";
+import { Card } from "@ui/components/card";
+import { Input } from "next/dist/client/components/input";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+export default function OrganizationCustomerReceiveReportPage() {
+	const params = useParams();
+	const router = useRouter();
+	const organizationSlug = params.organizationSlug as string;
+	const { activeOrganization } = useActiveOrganization();
+
+	const organizationId = activeOrganization?.id;
+
+	const [customerReceiveData, setCustomerReceiveData] = useState([]);
+
+	useEffect(() => {
+		const fetchCustomerReceiveData = async () => {
+			if (!organizationId) return;
+			try {
+				const response = await fetch(
+					`/api/reports/customer-receive?organizationId=${organizationId}`,
+				);
+				if (!response.ok) {
+					throw new Error("Failed to fetch customer receive data");
+				}
+				const data = await response.json();
+				setCustomerReceiveData(data);
+			} catch (error: any) {
+				toast.error(error.message || "Failed to fetch customer receive data");
+			}
+		};
+
+		fetchCustomerReceiveData();
+	}, [organizationId]);
+
+	return (
+		<div className="container mx-auto py-6">
+			<PageHeader title="Organization Customer Receive Report" />
+
+			<Card>
+				<div className="p-4">
+					{customerReceiveData.length > 0 ? (
+						<ul>
+							{customerReceiveData.map((item: any) => (
+								<li key={item.id}>Customer Receive ID: {item.id}</li>
+							))}
+						</ul>
+					) : (
+						<p>No customer receive data found.</p>
+					)}
+				</div>
+			</Card>
+		</div>
+	);
 }

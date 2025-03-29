@@ -332,6 +332,7 @@ export const salesRouter = new Hono()
 					user: {
 						select: {
 							name: true,
+							email: true,
 						},
 					},
 					saleItems: {
@@ -408,9 +409,8 @@ export const salesRouter = new Hono()
 					customer: true,
 					user: {
 						select: {
-							id: true,
-							name: true,
 							email: true,
+							name: true,
 						},
 					},
 					saleItems: {
@@ -574,106 +574,6 @@ export const salesRouter = new Hono()
 			}
 		},
 	)
-	// DELETE (void) a sale
-	.delete(
-		"/:id",
-		authMiddleware,
-		describeRoute({
-			tags: ["Sales"],
-			summary: "Void/cancel a sale",
-			description: "Mark a sale as voided and restore inventory",
-			responses: {
-				200: {
-					description: "Sale voided successfully",
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									success: { type: "boolean" },
-									id: { type: "string" },
-								},
-							},
-						},
-					},
-				},
-				404: {
-					description: "Sale not found",
-				},
-				400: {
-					description: "Cannot void this sale",
-				},
-				401: {
-					description: "Unauthorized",
-				},
-			},
-		}),
-		async (c) => {
-			const id = c.req.param("id");
-
-			try {
-				// Use a transaction for updating the sale and handling inventory
-				const result = await db.$transaction(async (tx) => {
-					// Get the current sale with items
-					const sale = await tx.sale.findUnique({
-						where: { id },
-						include: {
-							saleItems: true,
-						},
-					});
-
-					if (!sale) {
-						throw new Error("Sale not found");
-					}
-
-					// Only allow voiding COMPLETED or DRAFT sales
-					if (
-						sale.status !== "COMPLETED" &&
-						sale.status !== "DRAFT"
-					) {
-						throw new Error(
-							"Only COMPLETED or DRAFT sales can be voided",
-						);
-					}
-
-					// If the sale was COMPLETED, restore inventory
-					if (sale.status === "COMPLETED") {
-						for (const item of sale.saleItems) {
-							await tx.inventory.updateMany({
-								where: {
-									organizationId: sale.organizationId,
-									outletId: sale.outletId,
-									productId: item.productId,
-								},
-								data: {
-									quantity: {
-										increment: item.quantity,
-									},
-								},
-							});
-						}
-					}
-
-					// Update sale status to VOIDED
-					await tx.sale.update({
-						where: { id },
-						data: {
-							status: "VOIDED",
-						},
-					});
-
-					return { success: true, id };
-				});
-
-				return c.json(result);
-			} catch (error) {
-				if (error instanceof Error) {
-					return c.json({ error: error.message }, 400);
-				}
-				return c.json({ error: "Failed to void sale" }, 500);
-			}
-		},
-	)
 	// CALCULATE sale totals
 	.post(
 		"/calculate",
@@ -705,12 +605,16 @@ export const salesRouter = new Hono()
 												discountAmount: {
 													type: "number",
 												},
+												lineTotalAfterDiscount: {
+													type: "number",
+												},
 											},
 										},
 									},
 									subtotal: { type: "number" },
 									discountAmount: { type: "number" },
 									totalBeforeTax: { type: "number" },
+									taxRate: { type: "number" },
 									taxAmount: { type: "number" },
 									totalAmount: { type: "number" },
 								},
@@ -718,12 +622,8 @@ export const salesRouter = new Hono()
 						},
 					},
 				},
-				400: {
-					description: "Invalid input",
-				},
-				401: {
-					description: "Unauthorized",
-				},
+				400: { description: "Invalid input" },
+				401: { description: "Unauthorized" },
 			},
 		}),
 		async (c) => {
@@ -828,22 +728,12 @@ export const salesRouter = new Hono()
 						},
 					},
 				},
-				404: {
-					description: "Sale not found",
-				},
-				400: {
-					description: "Invalid input",
-				},
-				401: {
-					description: "Unauthorized",
-				},
+				401: { description: "Unauthorized" },
 			},
 		}),
 		async (c) => {
 			const { saleId, recipientEmail, recipientPhone } =
 				c.req.valid("json");
-
-			// Find the sale with all related data
 			const sale = await db.sale.findUnique({
 				where: { id: saleId },
 				include: {
@@ -862,7 +752,6 @@ export const salesRouter = new Hono()
 					organization: {
 						select: {
 							name: true,
-							settings: true,
 						},
 					},
 				},
@@ -874,7 +763,7 @@ export const salesRouter = new Hono()
 
 			// Generate receipt (this is a mock implementation)
 			// In a real implementation, you would:
-			// 1. Format the sale data into a receipt template
+			// 1. Transform the sale data into a receipt template
 			// 2. Generate a PDF or HTML receipt
 			// 3. Store it or make it available for download
 			// 4. Optionally send it via email or SMS
@@ -898,4 +787,35 @@ export const salesRouter = new Hono()
 					: "Receipt generated successfully",
 			});
 		},
+	)
+	// DELETE a sale
+	.delete(
+		"/:id",
+		authMiddleware,
+		describeRoute({
+			tags: ["Sales"],
+			summary: "Delete a sale",
+			description: "Delete a specific sale",
+			responses: {
+				200: { description: "Sale deleted successfully" },
+				404: { description: "Sale not found" },
+				401: { description: "Unauthorized" },
+			},
+		}),
+		async (c) => {
+			const id = c.req.param("id");
+			try {
+				const sale = await db.sale.delete({
+					where: { id },
+				});
+				if (!sale) {
+					return c.json({ error: "Sale not found" }, 404);
+				}
+				return c.json({ message: "Sale deleted successfully" });
+			} catch (error) {
+				console.error("Error deleting sale:", error);
+				return c.json({ error: "Failed to delete sale" }, 500);
+			}
+		},
 	);
+export type AppRouter = typeof salesRouter;
