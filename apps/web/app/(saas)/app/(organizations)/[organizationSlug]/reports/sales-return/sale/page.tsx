@@ -9,7 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OrganizationSaleReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
@@ -17,42 +17,42 @@ export default function OrganizationItemTracingReportPage() {
 
 	const organizationId = activeOrganization?.id;
 
-	const [itemTracingData, setItemTracingData] = useState([]);
+	const [saleData, setSaleData] = useState([]);
 
 	useEffect(() => {
-		const fetchItemTracingData = async () => {
+		const fetchSaleData = async () => {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/sales-return/sale?organizationId=${organizationId}`,
 				);
 				if (!response.ok) {
-					throw new Error("Failed to fetch item tracing data");
+					throw new Error("Failed to fetch sale data");
 				}
 				const data = await response.json();
-				setItemTracingData(data);
+				setSaleData(data);
 			} catch (error: any) {
-				toast.error(error.message || "Failed to fetch item tracing data");
+				toast.error(error.message || "Failed to fetch sale data");
 			}
 		};
 
-		fetchItemTracingData();
+		fetchSaleData();
 	}, [organizationId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Organization Sale Report" />
 
 			<Card>
 				<div className="p-4">
-					{itemTracingData.length > 0 ? (
+					{saleData.length > 0 ? (
 						<ul>
-							{itemTracingData.map((item: any) => (
-								<li key={item.id}>Item Tracing ID: {item.id}</li>
+							{saleData.map((item: any) => (
+								<li key={item.id}>Sale ID: {item.id}</li>
 							))}
 						</ul>
 					) : (
-						<p>No item tracing data found.</p>
+						<p>No sale data found.</p>
 					)}
 				</div>
 			</Card>

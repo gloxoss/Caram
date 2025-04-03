@@ -4,15 +4,16 @@ import { useActiveOrganization } from "@saas/organizations/hooks/use-active-orga
 import { PageHeader } from "@saas/shared/components/PageHeader";
 import { Button } from "@ui/components/button";
 import { Card } from "@ui/components/card";
-import { Input } from "next/dist/client/components/input";
+import { Input } from "@ui/components/input";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OutletItemTracingReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
+	const outletId = params.outletId as string;
 	const { activeOrganization } = useActiveOrganization();
 
 	const organizationId = activeOrganization?.id;
@@ -24,7 +25,7 @@ export default function OrganizationItemTracingReportPage() {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/item-tracing?organizationId=${organizationId}&outletId=${outletId}`,
 				);
 				if (!response.ok) {
 					throw new Error("Failed to fetch item tracing data");
@@ -37,11 +38,11 @@ export default function OrganizationItemTracingReportPage() {
 		};
 
 		fetchItemTracingData();
-	}, [organizationId]);
+	}, [organizationId, outletId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Outlet Item Tracing Report" />
 
 			<Card>
 				<div className="p-4">

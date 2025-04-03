@@ -9,50 +9,51 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OutletSalesReturnReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
+	const outletId = params.outletId as string;
 	const { activeOrganization } = useActiveOrganization();
 
 	const organizationId = activeOrganization?.id;
 
-	const [itemTracingData, setItemTracingData] = useState([]);
+	const [salesReturnData, setSalesReturnData] = useState([]);
 
 	useEffect(() => {
-		const fetchItemTracingData = async () => {
+		const fetchSalesReturnData = async () => {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/sales-return?organizationId=${organizationId}&outletId=${outletId}`,
 				);
 				if (!response.ok) {
-					throw new Error("Failed to fetch item tracing data");
+					throw new Error("Failed to fetch sales return data");
 				}
 				const data = await response.json();
-				setItemTracingData(data);
+				setSalesReturnData(data);
 			} catch (error: any) {
-				toast.error(error.message || "Failed to fetch item tracing data");
+				toast.error(error.message || "Failed to fetch sales return data");
 			}
 		};
 
-		fetchItemTracingData();
-	}, [organizationId]);
+		fetchSalesReturnData();
+	}, [organizationId, outletId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Outlet Sales Return Report" />
 
 			<Card>
 				<div className="p-4">
-					{itemTracingData.length > 0 ? (
+					{salesReturnData.length > 0 ? (
 						<ul>
-							{itemTracingData.map((item: any) => (
-								<li key={item.id}>Item Tracing ID: {item.id}</li>
+							{salesReturnData.map((item: any) => (
+								<li key={item.id}>Sales Return ID: {item.id}</li>
 							))}
 						</ul>
 					) : (
-						<p>No item tracing data found.</p>
+						<p>No sales return data found.</p>
 					)}
 				</div>
 			</Card>

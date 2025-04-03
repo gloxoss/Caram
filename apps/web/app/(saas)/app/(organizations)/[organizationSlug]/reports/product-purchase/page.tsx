@@ -9,7 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OrganizationProductPurchaseReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
@@ -17,42 +17,42 @@ export default function OrganizationItemTracingReportPage() {
 
 	const organizationId = activeOrganization?.id;
 
-	const [itemTracingData, setItemTracingData] = useState([]);
+	const [productPurchaseData, setProductPurchaseData] = useState([]);
 
 	useEffect(() => {
-		const fetchItemTracingData = async () => {
+		const fetchProductPurchaseData = async () => {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/product-purchase?organizationId=${organizationId}`,
 				);
 				if (!response.ok) {
-					throw new Error("Failed to fetch item tracing data");
+					throw new Error("Failed to fetch product purchase data");
 				}
 				const data = await response.json();
-				setItemTracingData(data);
+				setProductPurchaseData(data);
 			} catch (error: any) {
-				toast.error(error.message || "Failed to fetch item tracing data");
+				toast.error(error.message || "Failed to fetch product purchase data");
 			}
 		};
 
-		fetchItemTracingData();
+		fetchProductPurchaseData();
 	}, [organizationId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Organization Product Purchase Report" />
 
 			<Card>
 				<div className="p-4">
-					{itemTracingData.length > 0 ? (
+					{productPurchaseData.length > 0 ? (
 						<ul>
-							{itemTracingData.map((item: any) => (
-								<li key={item.id}>Item Tracing ID: {item.id}</li>
+							{productPurchaseData.map((item: any) => (
+								<li key={item.id}>Product Purchase ID: {item.id}</li>
 							))}
 						</ul>
 					) : (
-						<p>No item tracing data found.</p>
+						<p>No product purchase data found.</p>
 					)}
 				</div>
 			</Card>

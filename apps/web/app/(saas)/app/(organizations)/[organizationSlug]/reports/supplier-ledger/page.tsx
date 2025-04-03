@@ -4,12 +4,12 @@ import { useActiveOrganization } from "@saas/organizations/hooks/use-active-orga
 import { PageHeader } from "@saas/shared/components/PageHeader";
 import { Button } from "@ui/components/button";
 import { Card } from "@ui/components/card";
-import { Input } from "next/dist/client/components/input";
+import { Input } from "@ui/components/input";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OrganizationSupplierLedgerReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
@@ -17,42 +17,42 @@ export default function OrganizationItemTracingReportPage() {
 
 	const organizationId = activeOrganization?.id;
 
-	const [itemTracingData, setItemTracingData] = useState([]);
+	const [supplierLedgerData, setSupplierLedgerData] = useState([]);
 
 	useEffect(() => {
-		const fetchItemTracingData = async () => {
+		const fetchSupplierLedgerData = async () => {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/supplier-ledger?organizationId=${organizationId}`,
 				);
 				if (!response.ok) {
-					throw new Error("Failed to fetch item tracing data");
+					throw new Error("Failed to fetch supplier ledger data");
 				}
 				const data = await response.json();
-				setItemTracingData(data);
+				setSupplierLedgerData(data);
 			} catch (error: any) {
-				toast.error(error.message || "Failed to fetch item tracing data");
+				toast.error(error.message || "Failed to fetch supplier ledger data");
 			}
 		};
 
-		fetchItemTracingData();
+		fetchSupplierLedgerData();
 	}, [organizationId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Organization Supplier Ledger Report" />
 
 			<Card>
 				<div className="p-4">
-					{itemTracingData.length > 0 ? (
+					{supplierLedgerData.length > 0 ? (
 						<ul>
-							{itemTracingData.map((item: any) => (
-								<li key={item.id}>Item Tracing ID: {item.id}</li>
+							{supplierLedgerData.map((item: any) => (
+								<li key={item.id}>Supplier Ledger ID: {item.id}</li>
 							))}
 						</ul>
 					) : (
-						<p>No item tracing data found.</p>
+						<p>No supplier ledger data found.</p>
 					)}
 				</div>
 			</Card>

@@ -9,7 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function OrganizationItemTracingReportPage() {
+export default function OrganizationSupplierBalanceReportPage() {
 	const params = useParams();
 	const router = useRouter();
 	const organizationSlug = params.organizationSlug as string;
@@ -17,42 +17,42 @@ export default function OrganizationItemTracingReportPage() {
 
 	const organizationId = activeOrganization?.id;
 
-	const [itemTracingData, setItemTracingData] = useState([]);
+	const [supplierBalanceData, setSupplierBalanceData] = useState([]);
 
 	useEffect(() => {
-		const fetchItemTracingData = async () => {
+		const fetchSupplierBalanceData = async () => {
 			if (!organizationId) return;
 			try {
 				const response = await fetch(
-					`/api/reports/item-tracing?organizationId=${organizationId}`,
+					`/api/reports/supplier-balance?organizationId=${organizationId}`,
 				);
 				if (!response.ok) {
-					throw new Error("Failed to fetch item tracing data");
+					throw new Error("Failed to fetch supplier balance data");
 				}
 				const data = await response.json();
-				setItemTracingData(data);
+				setSupplierBalanceData(data);
 			} catch (error: any) {
-				toast.error(error.message || "Failed to fetch item tracing data");
+				toast.error(error.message || "Failed to fetch supplier balance data");
 			}
 		};
 
-		fetchItemTracingData();
+		fetchSupplierBalanceData();
 	}, [organizationId]);
 
 	return (
 		<div className="container mx-auto py-6">
-			<PageHeader title="Organization Item Tracing Report" />
+			<PageHeader title="Organization Supplier Balance Report" />
 
 			<Card>
 				<div className="p-4">
-					{itemTracingData.length > 0 ? (
+					{supplierBalanceData.length > 0 ? (
 						<ul>
-							{itemTracingData.map((item: any) => (
-								<li key={item.id}>Item Tracing ID: {item.id}</li>
+							{supplierBalanceData.map((item: any) => (
+								<li key={item.id}>Supplier Balance ID: {item.id}</li>
 							))}
 						</ul>
 					) : (
-						<p>No item tracing data found.</p>
+						<p>No supplier balance data found.</p>
 					)}
 				</div>
 			</Card>
